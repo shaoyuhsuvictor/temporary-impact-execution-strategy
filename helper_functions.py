@@ -67,9 +67,10 @@ def compute_empirical_impact(snapshot, side='buy', num_points=100):
 
     return np.array(x_vals), np.array(g_vals)
 
-def plot_impact(ax, x_vals, g_vals, label='', linestyle='-', linewidth=1, alpha=1, color='tab:blue', title=''):
+def plot_impact(ax, x_vals, g_vals, label='', linestyle='-', linewidth=1, alpha=1, color='tab:blue', title=None):
     ax.plot(x_vals, g_vals, label=label, linestyle=linestyle, linewidth=linewidth, alpha=alpha, color=color)
-    ax.set_title(title, fontsize=9)
+    if title:
+        ax.set_title(title, fontsize=9)
     ax.set_xlabel("Order size (shares)")
     ax.set_ylabel("Slippage ($)")
     ax.grid(True, linestyle='--', alpha=0.5)
