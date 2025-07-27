@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+from sklearn.metrics import mean_squared_error, r2_score
 
 def get_lob_snapshots(ticker_dir, freq='1min'):
     dfs = []
@@ -65,13 +67,36 @@ def compute_empirical_impact(snapshot, side='buy', num_points=100):
 
     return np.array(x_vals), np.array(g_vals)
 
-def plot_empirical_impact(x_vals, g_vals, title='Empirical Impact Curve', side='buy'):
-    plt.figure(figsize=(8, 5))
-    plt.plot(x_vals, g_vals, label=f'{side.capitalize()} side impact', linewidth=2)
-    plt.xlabel("Order size (shares)")
-    plt.ylabel("Slippage ($)")
-    plt.title(title)
-    plt.grid(True, linestyle='--', alpha=0.5)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+def plot_impact(ax, x_vals, g_vals, label='', linestyle='-', linewidth=1, alpha=1, color='tab:blue', title=''):
+    ax.plot(x_vals, g_vals, label=label, linestyle=linestyle, linewidth=linewidth, alpha=alpha, color=color)
+    ax.set_title(title, fontsize=9)
+    ax.set_xlabel("Order size (shares)")
+    ax.set_ylabel("Slippage ($)")
+    ax.grid(True, linestyle='--', alpha=0.5)
+
+def sample_snapshot(df, rows_per_day=390, day_indices=[0, 5, 10, 15, 20], time_offsets = list(range(0, 390, 30)) + [389]):
+    row_indices = [d * rows_per_day + t for d in day_indices for t in time_offsets]
+    return df.iloc[row_indices].reset_index(drop=True)
+
+def linear_model(x, beta):
+    return beta * x
+
+def power_law_model(x, alpha, delta):
+        with np.errstate(over='ignore', invalid='ignore'):
+            return alpha * x ** delta
+
+def quadratic_model(x, alpha, beta):
+        return alpha * x + beta * x ** 2
+
+def fit_impact_model(x_vals, g_vals, model_func, p0, bounds=(-np.inf, np.inf)):
+    popt, _ = curve_fit(model_func, x_vals, g_vals, p0=p0, bounds=bounds, maxfev=10000)
+    g_fit = model_func(x_vals, *popt)
+
+    mse = mean_squared_error(g_vals, g_fit)
+    r2 = r2_score(g_vals, g_fit)
+
+    return popt, mse, r2, g_fit
+
+def shifted_power_law(x, gamma, alpha, delta):
+        with np.errstate(over='ignore', invalid='ignore'):
+            return gamma + alpha * x ** delta
